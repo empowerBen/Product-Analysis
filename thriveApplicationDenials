@@ -1,0 +1,38 @@
+
+drop table if exists #deniedApplications;
+SELECT ULA.*
+into #deniedApplications
+FROM UserLoanApplications ULA
+-- INNER JOIN Loans UL ON ULA.UserLoanApplicationId=UL.UserLoanApplicationId
+WHERE DATEDIFF(day,ULA.CreatedAt,GETDATE())>30
+AND ULA.Status IN (0,1,2);
+
+drop table if exists #adverseActionNotices;
+SELECT * -- LD.CreatedAt,ULAD.UserLoanAPplicationId
+-- into #adverseActionNotices 
+FROM UserLoanApplicationDisclosures ULAD
+INNER JOIN LoanDisclosures LD ON ULAD.LoanDisclosureId=LD.LoanDisclosureId
+WHERE -- DocumentType=2 AND 
+ULAD.UserLoanApplicationId=22626;
+
+
+
+drop table if exists #noticeOfIncomplete;
+SELECT LD.CreatedAt,ULAD.UserLoanAPplicationId
+into #noticeOfIncomplete
+FROM UserLoanApplicationDisclosures ULAD
+INNER JOIN LoanDisclosures LD ON ULAD.LoanDisclosureId=LD.LoanDisclosureId
+WHERE DocumentType=1;
+
+SELECT * FROM UserLoanApplicationDenialReasons;
+
+SELECT TOP 10000 #deniedApplications.UserLoanApplicationId,
+#deniedApplications.UserId,
+CASE when #deniedApplications.Status=0 then 'Denied' when  #deniedApplications.Status=1 then 'Qualified' when  #deniedApplications.Status=2 then 'Incomplete' end as ApplicationStatus,
+#adverseActionNotices.CreatedAt as aanDate,#deniedApplications.CreatedAt as applicationDate,
+DATEDIFF(day,#deniedApplications.CreatedAt,#adverseActionNotices.CreatedAt) as daysToGenerateAan,
+#noticeOfIncomplete.CreatedAt as noiaDate,
+DATEDIFF(day,#deniedApplications.CreatedAt,#noticeOfIncomplete.CreatedAt) as daysToGenerateNoia
+FROM #deniedApplications 
+LEFT JOIN #adverseActionNotices ON #deniedApplications.UserLoanApplicationId=#adverseActionNotices.UserLoanApplicationId
+LEFT JOIN #noticeOfIncomplete ON #deniedApplications.UserLoanApplicationId=#noticeOfIncomplete.UserLoanApplicationId;
