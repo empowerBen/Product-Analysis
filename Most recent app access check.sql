@@ -5,7 +5,8 @@ select
 distinct a.userId 
 , a.userLoanApplicationId
 , a.loanId 
-, convert(varchar(7), DateAccessed , 23) as access_month 
+, b.DateAccessed
+, convert(varchar(7), b.DateAccessed , 23) as access_month -- converts the month into a easy to read format. I f you want to do a datediff function use the original field
 , row_number() over(partition by b.userId order by DateAccessed desc) as access_num_desc 
 into #driver 
 from loans a 
