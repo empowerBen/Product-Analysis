@@ -1,0 +1,139 @@
+/* Count # of Institution Accounts to run Auth on at Empower */
+DROP TABLE IF EXISTS #IncrementalAccountsToLink;
+SELECT
+    DATEPART(Month,DateCreated) as Month,
+    DATEPART(Year,DateCreated) as Year,
+    COUNT(InstitutionAccountId) as Count,
+    COUNT(InstitutionAccountId)*0.47 as CostToPullAuth
+    
+INTO #IncrementalAccountsToLink
+FROM InstitutionAccount
+WHERE (
+    -- Don't filter out IsDeleted!=1 because deleted accounts will also have auth run on them at initial link --
+    -- Filter for year 2022 --
+    DATEPART(Year,DateCreated) = 2023
+    -- Filter out accounts with an auth already run --
+    AND ProductsConnected NOT LIKE '%auth%'
+    AND InstitutionType != 13
+)
+GROUP BY 
+    DATEPART(Month,DateCreated),
+    DATEPART(Year,DateCreated)
+ORDER BY 
+    DATEPART(Month,DateCreated) asc
+;
+
+/* For breakeven analysis: incremental count # of users with an user subscription invoice generated and no auth */
+DROP TABLE IF EXISTS #newlyAddressableInvoicesWithChange
+SELECT
+    DATEPART(Month,InvoiceDate) as Month,
+DATEPART(Year,InvoiceDate) as Year,
+    COUNT(c.UserSubscriptionInvoiceId) as CountInvoicesToDebit,
+    COUNT(c.UserSubscriptionInvoiceId)*8 as RevenueInvoicesToDebit
+INTO #newlyAddressableInvoicesWithChange
+FROM UserSubscription as b 
+INNER JOIN UserSubscriptionInvoice as c
+    ON b.UserSubscriptionId = c.UserSubscriptionId
+INNER JOIN Account as a on b.AccountId=a.AccountId
+INNER JOIN InstitutionAccount as ia on a.InstitutionAccountId=ia.InstitutionAccountId
+
+WHERE (
+    -- Don't filter out IsDeleted!=1 because deleted accounts will also have auth run on them at initial link
+    -- Filter for year 2022
+    DATEPART(Year,InvoiceDate) = 2023
+    -- Find accounts connected but not with auth 
+    AND ProductsConnected NOT LIKE '%auth%'
+    -- Find users with subscription invoice created on the same month that the Institution Account is created
+    AND InvoiceStatus IN (0,3,6)
+)
+GROUP BY 
+    DATEPART(Month,InvoiceDate),
+    DATEPART(Year,InvoiceDate)
+ORDER BY 
+ DATEPART(Month,InvoiceDate) asc;
+
+select 
+#IncrementalAccountsToLink.Month, 
+#IncrementalAccountsToLink.Year, 
+#IncrementalAccountsToLink.Count as incrementalInstitutionsToCallAuth,
+#IncrementalAccountsToLink.CostToPullAuth,
+-- #newlyAddressableInvoicesWithChange.CountInvoicesToDebit,
+-- #newlyAddressableInvoicesWithChange.RevenueInvoicesToDebit,
+(#IncrementalAccountsToLink.CostToPullAuth)*100/8/#newlyAddressableInvoicesWithChange.CountInvoicesToDebit as percentCollectionRateToBreakeven
+from #IncrementalAccountsToLink
+inner join #newlyAddressableInvoicesWithChange on #newlyAddressableInvoicesWithChange.Month=#IncrementalAccountsToLink.Month 
+        and #newlyAddressableInvoicesWithChange.Year=#IncrementalAccountsToLink.Year;
+
+-- invoice number by user & max CA offer in invoice month 
+
+-- invoices of interest 
+DROP TABLE IF EXISTS #invoicesOfInterest;
+SELECT
+    DATEPART(Month,InvoiceDate) as Month,
+DATEPART(Year,InvoiceDate) as Year,
+    c.UserSubscriptionInvoiceId,
+    b.UserId
+
+INTO #invoicesOfInterest
+FROM UserSubscription as b 
+INNER JOIN UserSubscriptionInvoice as c
+    ON b.UserSubscriptionId = c.UserSubscriptionId
+INNER JOIN Account as a on b.AccountId=a.AccountId
+INNER JOIN InstitutionAccount as ia on a.InstitutionAccountId=ia.InstitutionAccountId
+
+WHERE (
+    -- Don't filter out IsDeleted!=1 because deleted accounts will also have auth run on them at initial link --
+    -- Filter for year 2022 --
+    DATEPART(Year,InvoiceDate) = 2023
+    -- Find no auth users --
+    AND ProductsConnected NOT LIKE '%auth%'
+    AND InvoiceStatus IN (0,3,6)
+)
+;
+
+-- invoice number by sub record 
+drop table if exists #invoiceNumberBySubscription; 
+select 
+usersubscriptionid,usersubscriptioninvoiceid,row_number() OVER(PARTITION BY UsersubscriptionId ORDER BY UserSubscriptionInvoiceId ASC) as invoiceNumber
+into #invoiceNumberBySubscription 
+from UserSubscriptionInvoice;
+
+-- max eligibility in month of invoice generation
+DROP TABLE IF EXISTS #invoicesOfInterestWithEligibilityAndInvoiceNumber;
+SELECT
+    #invoicesOfInterest.Month,
+    #invoicesOfInterest.Year, 
+    #invoicesOfInterest.UserSubscriptionInvoiceId,
+    #invoicesOfInterest.UserId,
+    #invoiceNumberBySubscription.invoiceNumber,
+    MAX(AmountEligible) as maxEligibilityInMonthOfInvoice
+
+ INTO #invoicesOfInterestWithEligibilityAndInvoiceNumber
+FROM #invoicesOfInterest
+inner join #invoiceNumberBySubscription on #invoicesOfInterest.UserSubscriptionInvoiceId= #invoiceNumberBySubscription.UserSubscriptionInvoiceId
+inner join usercreditvariable ucv on #invoicesOfInterest.userid=ucv.userid
+inner join usercashadvanceeligibility ucae on (
+    ucv.usercreditvariableid=ucae.usercreditvariableid 
+    and DATEPART(month,ucae.EligibilityCreatedAt)=#invoicesOfInterest.Month
+    and DATEPART(year,ucae.EligibilityCreatedAt)=#invoicesOfInterest.Year)
+group by 
+    #invoicesOfInterest.Month,
+    #invoicesOfInterest.Year, 
+    #invoicesOfInterest.UserSubscriptionInvoiceId,
+    #invoicesOfInterest.UserId,
+    #invoiceNumberBySubscription.invoiceNumber;
+
+-- aggregate to identify collection pockets 
+
+SELECT 
+maxEligibilityInMonthOfInvoice,
+CASE WHEN invoiceNumber=1 then '1' when invoiceNumber <=3 then '2-3' else '4+' end as InvoiceGrouping, 
+Month,
+Year,
+COUNT(DISTINCT UserSubscriptionInvoiceId) as invoicesToCollect
+FROM #invoicesOfInterestWithEligibilityAndInvoiceNumber
+GROUP BY 
+maxEligibilityInMonthOfInvoice,
+CASE WHEN invoiceNumber=1 then '1' when invoiceNumber <=3 then '2-3' else '4+' end, 
+Month,
+Year;
