@@ -1,0 +1,153 @@
+drop table if exists #cardCountL7D;
+select CardType,COUNT(DISTINCT UserCardId) as cardsDelivered 
+into #cardCountL7D
+from usercard
+where 1=1 
+and datediff(day,DateGenerated,GETDATE())<=7
+group by CardType;
+
+drop table if exists #cardCountL7DExceedingCharacterCount;
+select CardType,COUNT(DISTINCT UserCardId) as cardsDeliveredOverCharacterCount
+into #cardCountL7DExceedingCharacterCount
+from usercard
+where 1=1 
+and datediff(day,DateGenerated,GETDATE())<=7
+and len(cardtext)>120
+group by CardType;
+
+drop table if exists #orderMessages; 
+select *,row_number() OVER (PARTITION BY CardType ORDER BY DateGenerated DESC) as test
+into #orderMessages
+from usercard
+where 1=1 
+and datediff(day,DateGenerated,GETDATE())<=7;
+
+drop table if exists #latestMessage;
+select CardType,CardText 
+into #latestMessage 
+from #orderMessages
+where 1=1 
+and test=1;
+
+
+select #cardCountL7D.*
+,#cardCountL7DExceedingCharacterCount.cardsDeliveredOverCharacterCount
+,(#cardCountL7DExceedingCharacterCount.cardsDeliveredOverCharacterCount*100)/#cardCountL7D.cardsDelivered as percentDeliveryOverThreshold
+, case when #cardCountL7D.CardType= 6 then 'CardCreditCardFeeTotalInYear'
+when #cardCountL7D.CardType= 7 then 'CardCreditCardFeeIncurred'
+when #cardCountL7D.CardType= 8 then 'CardLatePaymentFeeTotalInYear'
+when #cardCountL7D.CardType= 10 then 'CardSubscriptionsTotalPerMonth'
+when #cardCountL7D.CardType= 11 then 'CardSubscriptionsRecentAdded'
+when #cardCountL7D.CardType= 12 then 'CreditCardAnnualFeeChargedNextMonth'
+when #cardCountL7D.CardType= 13 then 'CardForeignTransactionFeesInLastYear'
+when #cardCountL7D.CardType= 14 then 'CardATMFeeTotalLastMonth'
+when #cardCountL7D.CardType= 15 then 'CardATMFeeTotalInYear'
+when #cardCountL7D.CardType= 16 then 'CreditCardLatePaymentFeeIncurred'
+when #cardCountL7D.CardType= 18 then 'CardOverdraftFeeIncurred'
+when #cardCountL7D.CardType= 19 then 'CardForeignTransactionFeesInLast2Days'
+when #cardCountL7D.CardType= 24 then '// CardCreditCardBillDueInSevenDays'
+when #cardCountL7D.CardType= 25 then 'CardLatePaymentForRecurringBill'
+when #cardCountL7D.CardType= 27 then 'CardUpcomingBillDueIn5Days'
+when #cardCountL7D.CardType= 28 then 'CardMonthlyReport'
+when #cardCountL7D.CardType= 29 then 'CardIncreaseInPaymentForRecurringBill'
+when #cardCountL7D.CardType= 34 then 'CardCheckingFeeIncurred'
+when #cardCountL7D.CardType= 37 then 'CardSpendTrackerMonthly'
+when #cardCountL7D.CardType= 38 then 'CardSpendTrackerWeekly'
+when #cardCountL7D.CardType= 39 then 'CardPaycheck'
+when #cardCountL7D.CardType= 47 then 'CardSpendingUpdate'
+when #cardCountL7D.CardType= 50 then 'CardSpendTrackerUpdate'
+when #cardCountL7D.CardType= 54 then 'CardYearlySummary'
+when #cardCountL7D.CardType= 58 then 'CardInstitutionAccountError'
+when #cardCountL7D.CardType= 60 then 'CardTransactionsCsvExport'
+when #cardCountL7D.CardType= 67 then 'CardTransferCompleted'
+when #cardCountL7D.CardType= 68 then 'CardTransferConfirmed'
+when #cardCountL7D.CardType= 69 then 'CardUpdateToAutosave'
+when #cardCountL7D.CardType= 74 then 'CardTaxStatementReady'
+when #cardCountL7D.CardType= 75 then 'CardMicrodepositReceived'
+when #cardCountL7D.CardType= 76 then 'CardSavingsInterestReceived'
+when #cardCountL7D.CardType= 79 then 'CardSavingsWithdrawalLimitWarning'
+when #cardCountL7D.CardType= 80 then 'CardMonthlyStatement'
+when #cardCountL7D.CardType= 81 then 'CardAutoSaveWeeklyUpdate'
+when #cardCountL7D.CardType= 82 then 'CustomerManualReviewCompleted'
+when #cardCountL7D.CardType= 83 then 'CardActivateDebitCard'
+when #cardCountL7D.CardType= 84 then 'CardAutosaveInitialCreate'
+when #cardCountL7D.CardType= 85 then 'CardAutosaveInitialSuccess'
+when #cardCountL7D.CardType= 86 then 'CardNegativeAccountBalance'
+when #cardCountL7D.CardType= 87 then 'CardPhoneNumberUpdateSuccess'
+when #cardCountL7D.CardType= 88 then 'CardPhoneNumberUpdateDenied'
+when #cardCountL7D.CardType= 89 then 'CardAccountClosure'
+when #cardCountL7D.CardType= 90 then 'CardIncentiveRewardPaid'
+when #cardCountL7D.CardType= 91 then 'CardAutosaveInitialAttempt'
+when #cardCountL7D.CardType= 92 then 'CardSubscriptionWaiverAdded'
+when #cardCountL7D.CardType= 93 then 'CardCoronavirus'
+when #cardCountL7D.CardType= 94 then 'CardFboToDdaUpgrade'
+when #cardCountL7D.CardType= 95 then 'CardSynapseClosure'
+when #cardCountL7D.CardType= 96 then 'CardCashAdvanceCreditSucceeded'
+when #cardCountL7D.CardType= 97 then 'CardCashAdvanceCreditFailed'
+when #cardCountL7D.CardType= 98 then 'CardCashAdvanceDebitSucceeded'
+when #cardCountL7D.CardType= 99 then 'CardCashAdvanceDebitFailed'
+when #cardCountL7D.CardType= 100 then 'CardCashAdvanceLowBalanceAlert'
+when #cardCountL7D.CardType= 101 then 'DobPatch'
+when #cardCountL7D.CardType= 102 then 'Custom'
+when #cardCountL7D.CardType= 103 then 'CardUserSuccessfulReferralPayout'
+when #cardCountL7D.CardType= 104 then 'CardUserUnsuccessfulReferralPayout'
+when #cardCountL7D.CardType= 105 then 'CardInvoiceWaiver'
+when #cardCountL7D.CardType= 106 then 'CardOverdraftAvoidance'
+when #cardCountL7D.CardType= 107 then 'CardCashAdvanceNowEligible'
+when #cardCountL7D.CardType= 108 then 'PaycheckTaggingApproval'
+when #cardCountL7D.CardType= 109 then 'PaycheckTaggingRejection'
+when #cardCountL7D.CardType= 110 then 'CardSubscriptionOverdue'
+when #cardCountL7D.CardType= 111 then 'CardSubscriptionDelinquent30Days'
+when #cardCountL7D.CardType= 112 then 'CardMobileWalletProvisioningNotification'
+when #cardCountL7D.CardType= 113 then 'CardCashAdvanceKYCPass'
+when #cardCountL7D.CardType= 114 then 'CardSubscriptionClosedByEmpower'
+when #cardCountL7D.CardType= 115 then 'CardAutosaveInactiveUserAttempt'
+when #cardCountL7D.CardType= 116 then 'CardAutosaveLatentInitialAttempt'
+when #cardCountL7D.CardType= 117 then 'CardPerksReview'
+when #cardCountL7D.CardType= 118 then 'CardPerksMatch'
+when #cardCountL7D.CardType= 119 then 'CardSubscriptionDelinquent10Days'
+when #cardCountL7D.CardType= 120 then 'CardUserReferralReminder'
+when #cardCountL7D.CardType= 121 then 'CardPayrollAllocationUpdated'
+when #cardCountL7D.CardType= 122 then 'CardPayrollConnectionBroken'
+when #cardCountL7D.CardType= 123 then 'CardLoansAdverseAction'
+when #cardCountL7D.CardType= 124 then 'CardLoansNoticeOfIncomplete'
+when #cardCountL7D.CardType= 125 then 'CardAdfTransactionDeclined'
+when #cardCountL7D.CardType= 126 then 'CardLoansAutoPayNudge'
+when #cardCountL7D.CardType= 127 then 'CardLoansAutoPayEnabled'
+when #cardCountL7D.CardType= 128 then 'CardLoansWatchlistHit'
+when #cardCountL7D.CardType= 129 then 'CardLoansAutoPayDisabled'
+when #cardCountL7D.CardType= 130 then 'CardLoansLateFeeCharged'
+when #cardCountL7D.CardType= 131 then 'CardLoansAutoPayPaymentReminder'
+when #cardCountL7D.CardType= 132 then 'CardLoanDrawSucceeded'
+when #cardCountL7D.CardType= 133 then 'CardLoanDrawFailed'
+when #cardCountL7D.CardType= 134 then 'CardPayrollCashAdvanceEligible'
+when #cardCountL7D.CardType= 135 then 'CardPayrollCashAdvanceIneligible'
+when #cardCountL7D.CardType= 136 then 'CardPayrollAccountMismatch'
+when #cardCountL7D.CardType= 137 then 'CardEmpowerAccountsClosed'
+when #cardCountL7D.CardType= 138 then 'CardAutocloseReminder'
+when #cardCountL7D.CardType= 139 then 'CardCashAdvanceNowEligibleForUserWithAutoclose'
+when #cardCountL7D.CardType= 140 then 'CardCashAdvanceNowEligibleForUserOnPauseSubscription'
+when #cardCountL7D.CardType= 141 then 'CardPausePendingSubscriptionReminder'
+when #cardCountL7D.CardType= 142 then 'CardUnpausePendingSubscriptionReminder'
+when #cardCountL7D.CardType= 143 then 'CardNowIneligibleForPauseSubscription'
+when #cardCountL7D.CardType= 144 then 'CardCashAdvanceOfferIncreased'
+when #cardCountL7D.CardType= 145 then 'CardNoPaycheckDetected'
+when #cardCountL7D.CardType= 146 then 'CardPaycheckDetected'
+when #cardCountL7D.CardType= 147 then 'CardBillingAccountAutoUpdate'
+when #cardCountL7D.CardType= 148 then 'CardAccessUnlockVerification'
+when #cardCountL7D.CardType= 149 then 'CardAutoSavePause'
+when #cardCountL7D.CardType= 150 then 'CardLoanDrawSchedulePaymentsCreationFailed'
+when #cardCountL7D.CardType= 151 then 'CardCreditScoreEligible'
+when #cardCountL7D.CardType= 152 then 'CardCreditScoreEligiblePast3D'
+when #cardCountL7D.CardType= 153 then 'CardLoanUpcomingPaymentReminder'
+when #cardCountL7D.CardType= 154 then 'CardStripeSubscriptionDisputeDetected'
+when #cardCountL7D.CardType= 155 then 'CardLateLoanReminder'
+when #cardCountL7D.CardType= 156 then 'CardStripeCashAdvanceDisputeDetected'
+when #cardCountL7D.CardType= 157 then 'CardLoanLatePaymentReminder'
+when #cardCountL7D.CardType= 158 then 'CardEndLoanLatePaymentReminder'
+when #cardCountL7D.CardType= 159 then 'CreditScoreUpdated' end as CardTypeDescription
+, #latestMessage.CardText
+from #cardCountL7D
+left join #cardCountL7DExceedingCharacterCount on #cardCountL7D.cardtype=#cardCountL7DExceedingCharacterCount.cardtype
+left join #latestMessage on #cardCountL7D.CardType=#latestMessage.CardType
+order by #cardCountL7D.cardsDelivered desc;
