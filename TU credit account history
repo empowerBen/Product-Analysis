@@ -1,0 +1,48 @@
+select top 1000
+    trans_union_credit_account_history_data_id
+,hist_eff_dte as effectiveDate -- date of latest account update
+,acct_rte_prfl_cde
+,acct_mop_cde
+,hist_eff_dte_age
+,high_cr_amt as highCreditAmount -- either balance held on account or initial balance amount
+,cr_lmt_amt as creditLimitAmount
+,curr_bal_amt as currentBalanceAmount 
+,payt_amt
+,payt_due_amt
+,past_due_amt
+,cmplnc_rem_cde as complianceRemarkCode
+,rte_rem_cde as ratingRemarkCode 
+,gnrc_rem_cde as genericRemarkCode -- 
+,follow_consumer_id
+,follow_account_id
+, CASE cmplnc_rem_cde
+    WHEN 'AID' THEN 'Account information disputed by consumer'
+    WHEN 'CAD' THEN 'Dispute of account information/closed by consumer'
+    WHEN 'CBC' THEN 'Account closed by consumer'
+    WHEN 'CBD' THEN 'Dispute resolved; consumer disagrees/account closed by consumer'
+    WHEN 'DRC' THEN 'Dispute resolved—subscriber disagrees'
+    WHEN 'DRG' THEN 'Dispute resolved reported by grantor'
+END as complianceRemarkCodeDescription
+, CASE rte_rem_cde 
+    WHEN 'CLA' THEN 'Placed for collection'
+    WHEN 'CLO' THEN 'Closed'
+    WHEN 'DLU' THEN 'Deed in lieu'
+    WHEN 'FPD' THEN 'Account paid, foreclosure started'
+    WHEN 'FRD' THEN 'Foreclosure, collateral sold'
+    WHEN 'PCL' THEN 'Paid collection'
+    WHEN 'PLP' THEN 'Profit and loss now paying'
+    WHEN 'PPL' THEN 'Paid profit and loss'
+    WHEN 'PRL' THEN 'Profit and loss write-off'
+    WHEN 'RFN' THEN 'Refinanced'
+    WHEN 'RPD' THEN 'Paid repossession'
+    WHEN 'RPO' THEN 'Repossession'
+    WHEN 'RVN' THEN 'Voluntary surrender'
+    WHEN 'SGL' THEN 'Claim filed with government'
+    WHEN 'TRF' THEN 'Transfer'
+END as ratingRemarkCodeDescription
+
+
+from transunioncreditaccounthistorydata
+where 1=1 
+and DATEDIFF(day,hist_eff_dte,GETDATE())<7
+order by follow_account_id,effectiveDate desc;
