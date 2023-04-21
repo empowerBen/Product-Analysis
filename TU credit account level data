@@ -1,0 +1,153 @@
+select  top 10 
+ACCT_MOP_CDE AS accountMOPCode -- Manner of Payment (MOP) code provides the condition of the account as of the effective date (e.g. 01 = Paid or paying as agreed, 02 = 30 days past due).
+  ,ACCT_RTE_PRFL_CDE AS accountRatingProfileCode -- One character representation of the MOP code that was reported for the historical effective date (e.g. if MOP code = 01, then account rating profile code = 1).
+  ,ACCT_TYP_CDE AS accountTypeCode -- Describes the type of loan or obligation made by the credit grantor to the consumer (e.g. CC = credit card).
+  ,AFFIL_REM_CDE AS affiliateBankruptcyRemarkCode -- Describes a condition that applies to the consumer affiliated with the account. Affiliate remarks are typically related to bankruptcies (e.g. CBL = Chapter 7 bankruptcy).
+  ,BLOON_PAYT_AMT AS balloonPaymentAmount -- Amount in whole dollars that is owed at the end of a term for an account with specialized payment type of balloon. This amount is typically much larger than the monthly payment due amount.  
+  ,BLOON_PAYT_DUE_DTE AS balloonPaymentDueDate -- Date the final balloon payment for an account is due. 
+  ,BLOON_PAYT_STRT_DTE_AGE AS balloonPaymentStartDateAge -- Age in months since the balloon payment start date of the account. The number can be negative if the start date is in the future compared to the archive date.
+  ,CLSD_DTE AS closedDate -- Date when an account was closed to further purchases and/or the obligation was satisfied. 
+  ,CLS_DTE_AGE AS closedDateAge -- Age in months between an account closed date and archive date.
+  ,CMPLNC_REM_CDE AS complianceRemarkCode -- Describes a condition of the account that is required to report for compliance reasons. Compliance remarks are typically related to disputes (e.g. AID = account information disputed by consumer).
+  ,CMPLREM_FRSRPT_DTE AS complianceRemarkFirstReportedDate -- Effective date when the compliance remark code was first applied to an account.
+  ,CMPL_REM_FRST_RPT_DTE_AGE AS complianceRemarkFirstReportedDateAge -- Age in months between date that a compliance remark was first reported and the archive date.
+  ,CR_LMT_AMT AS creditLimitAmount -- Maximum amount of credit that can be extended for an account. Not present on portfolio types I, O or M. 
+  ,CRDTR_CLS_CDE AS creditorClassificationCode -- Code is used to categorize the creditor by their primary line of business (e.g. B is Bank).
+  ,CURR_BAL_AMT AS currentBalanceAmount -- Total amount in whole dollars that is owed on the account as of the effective date. 
+  ,DEFR_PAYT_STRT_DTE AS deferredPaymentsStartDate -- Date a loan will resume contractual payment after a deferral period.
+  ,DEFR_PAYT_STRT_DTE_AGE AS deferredPaymentsStartDateAge -- Age in months between the deferred payment start date and the archive date.
+  ,EFF_DTE AS effectiveDate -- Date the account was last verified by the data provider. 
+  ,END_DTE AS endDate -- Date that the account association for a consumer associated to the account was terminated (e.g. the effective date when an ECOA code = T was reported by the credit grantor).
+  ,ERL_MAX_DELQ_RTE_DTE_AGE AS earliestMaximumDelinquencyRatingDate -- Date of the earliest instance of maximum delinquency on an account (e.g. first effective date that is associated with the MOP that is assessed as most delinquent up to a value of 5).
+,ERL_MXDLQ_PSDU_AMT as earliestMaximumDelinquencyRatingPastDueAmount -- Amount in whole dollars that was owed at the earliest instance of maximum delinquency on the account. 
+,FOLLOW_ACCOUNT_ID as followAccountID -- Account ID to match account across files
+,GNRC_REM_CDE as genericRemarkCode -- Remark code that further describes a condition of the account (e.g. SET = settled for less than the full balance).
+,GNRC_REM_FRST_RPT_DTE_AGE as genericRemarkCodeFirstReportedDateAge -- Months between generic remark first reported date and archive date.
+,KOB_POSN_1_CDE as kindOfBusinessPosition1Code -- Code is used to categorize the creditor by their primary line of business (e.g. B is Bank )
+,LEGIS_PRHIB_CDE as legislativelyProhibitedCode -- Indicates a reason why a consumer credit data element is legislatively prohibited from being presented (e.g. the FACT ACT prohibits certain medical information from being disclosed).
+,MAX_DELQ_AMT as maximumDelinquencyAmount -- Amount in whole dollars that was owed at the most recent instance of maximum delinquency on an account.
+,MAX_DELQ_DTE_AGE as maximumDelinquencyDateAge -- Months between the maximum delinquent date and archive date.
+,OPEN_DTE_AGE as openedDateAge -- Age in months between the open date and archive date.
+,PAID_OUT_DTE as paidOutDate -- Date of the last payment when an account is reported with a zero balance. Applies to R, O, or C portfolio types only.  
+,PAST_DUE_AMT as pastDueAmount -- Amount in whole dollars that is past the due date as of the effective date.
+,PAYT_DTE as paymentDate -- Date of the most recent payment on the account. 
+,PAYT_DUE_AMT as paymentDueAmount -- Amount in whole dollars, expressed as a monthly payment, that the consumer must pay on an account.
+,PAYT_SCHD_MTH_CNT as paymentScheduleMonthCount -- Number of months in the life of a financial obligation (e.g. 36, 48, 360).  For minimum payments on revolving accounts, the value in this field is MIN.
+,PORF_SALE_IND_CDE as portfolioSaleIndicatorCode -- Classification used to indicate if an account was purchased from or sold to another company.  Possible values are:  1 = Portfolio Purchased From,  2 = Portfolio Sold To. 
+,REM_FRST_RPT_DTE as remarkFirstReportDate -- [Affiliate Remark First Reported Date]   Effective date when the affiliate remark code was first applied on an account. Affiliate remarks are typically related to bankruptcies.
+,RTE_REM_CDE as ratingRemarkCode -- Remark code that further describes the status of the account.  Rating remarks are typically related to collections (e.g. CLA = placed for collection).
+,RTE_REM_FRST_RPT_DTE_AGE as ratingRemarkCodeFirstReportedDateAge -- Age in months between rating remark first reported date and archive date.
+, CASE acct_mop_cde
+        WHEN '01' THEN 'Paid or paying as agreed'
+        WHEN '02' THEN '30 days past due'
+        WHEN '03' THEN '60 days past due'
+        WHEN '04' THEN '90 days past due'
+        WHEN '05' THEN '120 days past due'
+        WHEN '07' THEN 'Wage earner or similar plan'
+        WHEN '08' THEN 'Repossession'
+        WHEN '8A' THEN 'Voluntary surrender'
+        WHEN '8P' THEN 'Payment after repossession'
+        WHEN '09' THEN 'Charged off as bad debt'
+        WHEN '9B' THEN 'Collection account'
+        WHEN '9P' THEN 'Payment after charge off/collection'
+        WHEN 'UR' THEN 'Unrated or bankruptcy'
+        ELSE 'Unknown'
+    END AS accountMopCodeDescription
+, CASE acct_typ_cde
+         WHEN 'AF' THEN 'Appliance/Furniture'
+         WHEN 'AG' THEN 'Collection Agency/Attorney'
+         WHEN 'AL' THEN 'Auto Lease'
+         WHEN 'AU' THEN 'Automobile'
+         WHEN 'AX' THEN 'Agricultural Loan'
+         WHEN 'BC' THEN 'Business Credit Card'
+         WHEN 'BL' THEN 'Revolving Business Lines'
+         WHEN 'BU' THEN 'Business'
+         WHEN 'CB' THEN 'Combined Credit Plan'
+         WHEN 'CC' THEN 'Credit Card'
+         WHEN 'CE' THEN 'Commercial Line of Credit'
+         WHEN 'CH' THEN 'Charge Account'
+         WHEN 'CI' THEN 'Commercial Installment Loan'
+         WHEN 'CO' THEN 'Consolidation'
+         WHEN 'CP' THEN 'Child Support'
+         WHEN 'CR' THEN 'Cond. Sales Contract; Refinance'
+         WHEN 'CUT' THEN 'Telecommunications/Cellular'
+         WHEN 'CV' THEN 'Conventional Real Estate Mortgage'
+         WHEN 'CY' THEN 'Commercial Mortgage'
+         WHEN 'DC' THEN 'Debit Card'
+         WHEN 'DR' THEN 'Deposit Account with Overdraft Protection'
+         WHEN 'DS' THEN 'Debt Counseling Service'
+         WHEN 'EM' THEN 'Employment'
+         WHEN 'FC' THEN 'Debt Buyer'
+         WHEN 'FD' THEN 'Fraud Identify Check'
+         WHEN 'FE' THEN 'Attorney Fees'
+         WHEN 'FI' THEN 'FHA Home Improvement'
+         WHEN 'FL' THEN 'FMHA Real Estate Mortgage'
+         WHEN 'FM' THEN 'Family Support'
+         WHEN 'FR' THEN 'FHA Real Estate Mortgage'
+         WHEN 'FT' THEN 'Collection Credit Report Inquiry'
+         WHEN 'FX' THEN 'Flexible Spending Credit Card'
+         WHEN 'GA' THEN 'Government Employee Advance'
+         WHEN 'GE' THEN 'Government Fee for Services'
+         WHEN 'GF' THEN 'Government Fines'
+         WHEN 'GG' THEN 'Government Grant'
+         WHEN 'GO' THEN 'Government Overpayment'
+         WHEN 'GS' THEN 'Government Secured'
+         WHEN 'GU' THEN 'Govt. Unsecured Guar/Dir Ln'
+         WHEN 'GV' THEN 'Government'
+         WHEN 'HE' THEN 'Home Equity Loan'
+         WHEN 'HG' THEN 'Household Goods'
+         WHEN 'HI' THEN 'Home Improvement'
+         WHEN 'IE' THEN 'ID Report for Employment'
+         WHEN 'IS' THEN 'Installment Sales Contract'
+         WHEN 'LC' THEN 'Line of Credit'
+         WHEN 'LE' THEN 'Lease'
+        WHEN 'LI' THEN 'Lender-placed Insurance'
+        WHEN 'LN' THEN 'Construction Loan'
+        WHEN 'LS' THEN 'Credit Line Secured'
+        WHEN 'MB' THEN 'Manufactured Housing'
+        WHEN 'MD' THEN 'Medical Debt'
+        WHEN 'MH' THEN 'Medical/Health Care'
+        WHEN 'NT' THEN 'Note Loan'
+        WHEN 'PS' THEN 'Partly Secured'
+        WHEN 'RA' THEN 'Rental Agreement'
+        WHEN 'RC' THEN 'Returned Check'
+        WHEN 'RD' THEN 'Recreational Merchandise'
+        WHEN 'RE' THEN 'Real Estate'
+        WHEN 'RL' THEN 'Real Estate — Junior Liens'
+        WHEN 'RM' THEN 'Real Estate Mortgage'
+        WHEN 'SA' THEN 'Summary of Accounts — Same Status'
+        WHEN 'SC' THEN 'Secured Credit Card'
+        WHEN 'SE' THEN 'Secured'
+        WHEN 'SF' THEN 'Secondary Use of a Credit Report for Auto Financing'
+        WHEN 'SH' THEN 'Secured by Household Goods'
+        WHEN 'SI' THEN 'Secured Home Improvement'
+        WHEN 'SM' THEN 'Second Mortgage'
+        WHEN 'SO' THEN 'Secured by Household Goods & Collateral'
+        WHEN 'SR' THEN 'Secondary Use of a Credit Report'
+        WHEN 'ST' THEN 'Student Loan'
+        WHEN 'SU' THEN 'Spouse Support'
+        WHEN 'SX' THEN 'Secondary Use of a Credit Report for Other Financing'
+        WHEN 'TS' THEN 'Time Shared Loan'
+        WHEN 'UC' THEN 'Utility Company'
+        WHEN 'UK' THEN 'Unknown'
+        WHEN 'US' THEN 'Unsecured'
+        WHEN 'VM' THEN 'V.A. Real Estate Mortgage'
+        WHEN 'WT' THEN 'Individual Monitoring Report Inquiry'
+        ELSE 'Unknown' end as accountTypeDescription
+, CASE ecoa_cde
+        WHEN 'A' THEN 'Authorized user of shared account'
+        WHEN 'C' THEN 'Joint contractual liability'
+        WHEN 'I' THEN 'Individual account for sole use of customer'
+        WHEN 'M' THEN 'Account for which subject is liable but co-signer has liability if the maker defaults'
+        WHEN 'P' THEN 'Participant in shared account which cannot be distinguished as C or A'
+        WHEN 'S' THEN 'Account for which subject is co-signer and becomes liable if maker defaults'
+        WHEN 'T' THEN 'Relationship with account terminated'
+        WHEN 'U' THEN 'Undesignated'
+        WHEN 'X' THEN 'Deceased'
+        ELSE 'Unknown'
+    END AS ecoaCodeDescription
+, *
+from transunioncreditaccountdata
+
+where 1=1 
+order by effectiveDate desc;
